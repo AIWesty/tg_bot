@@ -49,57 +49,40 @@ async def send_weather_menu(message: Message) -> None:  #обработчик ф
 
 @router.message(F.voice)
 async def handle_voice(message: Message) -> None:
-    """Обработка голосового сообщения с проверкой всех возможных None."""
-    
-    # Создаем папку темп если её нет
     os.makedirs("temp", exist_ok=True)
     
-    # Проверяем, что message.voice существует
-    if not message.voice:
-        await message.answer("Не удалось получить голосовое сообщение")
-        return
-    
-    if message.from_user is None:
-        return
-
-    if message.bot is None:
+    if not message.voice or not message.from_user or not message.bot:
+        await message.answer("Ошибка: неверные параметры сообщения")
         return
     
     user = message.from_user
     
-    # Получаем file_id (с проверкой)
-    voice: Voice = message.voice
-    file_id: str = voice.file_id
     
     try:
-        # Получаем метаданные файла
-        voice_file = await message.bot.get_file(file_id)
-        
-        # Проверяем file_path
+        voice_file = await message.bot.get_file(message.voice.file_id)
         if not voice_file.file_path:
             await message.answer("Не удалось получить путь к файлу")
             return
             
-        # Формируем путь для сохранения
-        voice_path: str = f"temp/voice_{message.from_user.id}.ogg"
+        voice_path = f"temp/voice_{message.from_user.id}.ogg"
+        await message.bot.download_file(voice_file.file_path, voice_path)
         
-        # Скачиваем файл (теперь file_path точно str)
-        await message.bot.download_file(
-            file_path=voice_file.file_path,
-            destination=voice_path
-        )
+        # Добавляем лог
+        print(f"Файл сохранён: {voice_path}, размер: {os.path.getsize(voice_path)} байт")
         
-        # Преобразуем в текст
-        text: str = speech_to_text(voice_path)
-        await message.answer(f"Вы сказали: {text}")
+        text = speech_to_text(voice_path)
+        print(f"Распознанный текст: '{text}'")
         
+        if text:
+            await message.answer(f"Вы сказали: {text}")
+        else:
+            await message.answer("Не удалось распознать речь")
+            
     except Exception as e:
+        print(f"Ошибка обработки: {e}")
         await message.answer("Произошла ошибка при обработке голосового")
-        log_errors(e)
-        
     finally:
-        # Удаляем временный файл, если он существует
-        if Path(voice_path).exists():
-            Path(voice_path).unlink()
-        
+        if os.path.exists(voice_path):
+            os.remove(voice_path)
+    
     log_message(user.id, f'Вызвал команду (обработка голосового сообщения)')
