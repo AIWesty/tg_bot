@@ -1,0 +1,13 @@
+#зависимости проекта(фреймворки и сторонние библиотеки)
+
+aiogram # на данный момент актуально 3.20
+python-dotenv
+python-decouple
+apscheduler
+pydantic # валидация данных
+vosk  # для обработки голоса
+requests  # для API погоды
+pandas  # для работы с CSV
+PyYAML  # для конфигов
+fpdf2  # для генерации PDF-отчётов
+wave # для работы с WAV аудио

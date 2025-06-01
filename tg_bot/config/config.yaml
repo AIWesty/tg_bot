@@ -1,0 +1,9 @@
+bot:
+  token: ${BOT_TOKEN}  # Будет заменено из .env
+  admins: ${ADMIN_IDS}  
+  log_path: "./data/logs/"
+  users_db: "./data/users.csv"
+  
+weather:
+  cities: ["Moscow", "Saint-Petersburg", "London", "New York"]
+  api_key: ${WEATHER_API_KEY}  # Берется из .env
