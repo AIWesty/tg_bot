@@ -14,4 +14,4 @@ tg_bot/temp/*
 
 
 # Модель для vosk
-models/vosk-model-small-ru-0.22
+models/vosk-model-small-ru

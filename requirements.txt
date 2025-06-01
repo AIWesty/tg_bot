@@ -10,4 +10,5 @@ requests  # для API погоды
 pandas  # для работы с CSV
 PyYAML  # для конфигов
 fpdf2  # для генерации PDF-отчётов
-wave # для работы с WAV аудио
+librosa # для конвертации в WAV
+soundfile  # для конвертации в WAV

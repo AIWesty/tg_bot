@@ -51,7 +51,7 @@ async def send_weather_menu(message: Message) -> None:  #обработчик ф
 async def handle_voice(message: Message) -> None:
     os.makedirs("temp", exist_ok=True)
     
-    if not message.voice or not message.from_user or not message.bot:
+    if not message.voice or not message.from_user or not message.bot: #проверяем существуют ли voice, user и bot 
         await message.answer("Ошибка: неверные параметры сообщения")
         return
     
@@ -60,12 +60,12 @@ async def handle_voice(message: Message) -> None:
     
     try:
         voice_file = await message.bot.get_file(message.voice.file_id)
-        if not voice_file.file_path:
+        if not voice_file.file_path: 
             await message.answer("Не удалось получить путь к файлу")
             return
             
-        voice_path = f"temp/voice_{message.from_user.id}.ogg"
-        await message.bot.download_file(voice_file.file_path, voice_path)
+        voice_path = f"temp/voice_{message.from_user.id}.ogg" #формируем путь к фременному файлу
+        await message.bot.download_file(voice_file.file_path, voice_path) #загружаем файл с гс(откуда, куда)
         
         # Добавляем лог
         print(f"Файл сохранён: {voice_path}, размер: {os.path.getsize(voice_path)} байт")
