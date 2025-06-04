@@ -20,8 +20,12 @@ def log_message(user_id: int, text: str) -> None:
         f.write(log_entry)    
     
     
-def log_errors(error) -> None:  
-    '''Логируем ошибки'''
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S") #логирование ошибок в reports
-    with open(ERR_DIR, 'a', encoding='utf-8') as f: 
-        f.write(f'[{timestamp}] Error: {error}')
+def log_errors(error: str) -> None:
+    '''Логирует ошибки в файл errors.log'''
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    error_entry = f'[{timestamp}] Error: {error}\n'  # Добавлен \n в конце
+    
+    # Запись в файл ошибок
+    error_file = ERR_DIR / 'errors.log'
+    with open(error_file, 'a', encoding='utf-8') as f:
+        f.write(error_entry)

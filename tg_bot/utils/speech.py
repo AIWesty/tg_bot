@@ -3,54 +3,44 @@
 # pydub не работает нигде(Ошибка с отсутствием audioop)
 # librosa зависит от numpy (то есть при установке проекта - занимает много места)
 
+import os
 import json
 from vosk import Model, KaldiRecognizer
-import librosa
-import soundfile as sf
-import os
+import subprocess
 
-MODEL_DIR = "models/vosk-model-small-ru" #путь к модели
+# Путь к модели (локальная папка)
+MODEL_DIR = "models/vosk-model-small-ru"
+
+
+# Теперь загружаем модель из локальной папки
 model = Model(MODEL_DIR)
 
-def ogg_to_wav_bytes(ogg_path: str) -> bytes:  
-    """конвертирует OGG в WAV (16kHz, моно) и возвращает bytes"""
-    try:
-        # Загружаем аудио
-        y, sr = librosa.load(ogg_path, sr=16000, mono=True)
-        
-        # Сохраняем во временный файл в памяти
-        with sf.SoundFile('temp.wav', 'w', samplerate=sr, channels=1, format='WAV') as f:
-            f.write(y)
-        
-        # Читаем байты из временного файла
-        with open('temp.wav', 'rb') as f:
-            return f.read()
-        
-    except Exception as e:
-        print(f"Ошибка конвертации: {e}")
-        return b""
-    
-    finally:
-        # Удаляем временный файл
-        if os.path.exists('temp.wav'):
-            os.remove('temp.wav')
+def ogg_to_wav(ogg_path: str) -> bytes:
+    """Конвертирует OGG в WAV (16kHz, моно) через ffmpeg."""
+    cmd = [
+        "ffmpeg",
+        "-i", ogg_path,
+        "-f", "wav",
+        "-ar", "16000",
+        "-ac", "1",
+        "-"
+    ]
+    return subprocess.run(cmd, capture_output=True).stdout #запускает программу и возвращает wav в байтах 
 
 def speech_to_text(audio_path: str) -> str:
     try:
-        print(f"Обработка файла: {audio_path}") 
-        
-        wav_bytes = ogg_to_wav_bytes(audio_path) #превращаем в байты
-        
-        if not wav_bytes:
+        wav_data = ogg_to_wav(audio_path)  #применил функцию перевода wav
+        if not wav_data:
             print("Ошибка: не удалось конвертировать аудио")
             return ""
             
-        rec = KaldiRecognizer(model, 16000) #выбираем модель
-        if rec.AcceptWaveform(wav_bytes): # передаем модели файл
-            result = json.loads(rec.Result()) #загрузка результата
+        rec = KaldiRecognizer(model, 16000) # создание распознователя речи
+        if rec.AcceptWaveform(wav_data):  #если распознование завершилось 
+            result = json.loads(rec.Result()) #загужаем результат 
             return result.get("text", "").strip()
         
-        partial = json.loads(rec.PartialResult()) #если не удалось расшифровать полностью делаем это частично
+        # Получаем частичный результат, если есть
+        partial = json.loads(rec.PartialResult())
         return partial.get("partial", "").strip()
         
     except Exception as e:
