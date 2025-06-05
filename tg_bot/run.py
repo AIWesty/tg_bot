@@ -17,9 +17,10 @@ async def main() -> None:
     
     dp.include_router(commands.router) # подлючаем роутер с обработкой команд
     dp.include_router(messages.router) 
-    # dp.include_router(weather.router)
+    dp.include_router(weather.router)
 
     
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)#асинхронный опрос бота(событийный цикл)
     
     

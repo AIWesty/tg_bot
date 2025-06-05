@@ -3,7 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 def main_keyboard():  #интерактивная клавиатура
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text='Получить погоду!')],  #кнопки
+            [KeyboardButton(text='Получить погоду')],  #кнопки
             [KeyboardButton(text='Кота!')],
             
         ],

@@ -20,10 +20,10 @@ def log_message(user_id: int, text: str) -> None:
         f.write(log_entry)    
     
     
-def log_errors(error: str) -> None:
+def log_errors(error: str) -> None: # нужно допилить чтобы принмал в качестве аргумента пользователя
     '''Логирует ошибки в файл errors.log'''
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    error_entry = f'[{timestamp}] Error: {error}\n'  # Добавлен \n в конце
+    error_entry = f'[{timestamp}] Error: {error}\n' 
     
     # Запись в файл ошибок
     error_file = ERR_DIR / 'errors.log'

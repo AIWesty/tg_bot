@@ -5,7 +5,7 @@
 
 from pathlib import Path
 from aiogram import Router, F
-from aiogram.types import Message, Location, Voice
+from aiogram.types import Message
 from keyboards.reply import main_keyboard
 from utils.logger import log_errors, log_message
 from utils.speech import speech_to_text  #модуль распознования голоса
@@ -86,3 +86,48 @@ async def handle_voice(message: Message) -> None:
             os.remove(voice_path)
     
     log_message(user.id, f'Вызвал команду (обработка голосового сообщения)')
+    
+    
+@router.message(F.location)
+async def handle_location(message: Message):
+    if not message.from_user or not message.location:
+        return
+    
+    user = message.from_user
+    
+    
+    try:
+        lat = message.location.latitude
+        lon = message.location.longitude
+        
+        #конфигурация для запроса к апи гео
+        headers = {
+            'User-Agent': 'YourBotName/1.0 (your@email.com)',
+            'Accept-Language': 'ru-RU,ru;q=0.9'
+        }
+        
+        #формируем ссылку для запроса
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
+        
+        # формируем запрос с таймаутом
+        try:
+            api_response = requests.get(url, headers=headers, timeout=5)
+            api_response.raise_for_status()  # ловим исключения 4хх/5хх
+            
+            response_data = api_response.json() # распаковываем в json полученные данные
+            address = response_data.get("display_name", "Адрес не найден") #ищем локацию под display name
+            
+        except requests.exceptions.RequestException as e:
+            log_errors(f"API request failed: {e}")
+            address = "Не удалось получить данные о местоположении"
+        except ValueError as e:  # Вложенные Json ошибки
+            log_errors(f"Invalid API response: {e}")
+            address = "Ошибка обработки данных местоположения"
+            
+        await message.answer(f"📍 Адрес: {address}") # отправка результата
+        
+    except Exception as e:
+        log_errors("Unexpected error in location handler")
+        await message.answer("⚠️ Произошла ошибка при обработке местоположения")
+        
+    log_message(user.id, f'Вызвал команду Location')

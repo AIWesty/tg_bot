@@ -1,0 +1,2 @@
+[2025-06-05 14:04:30] Error: Ошибка в обработчике погоды: 'dict' object has no attribute 'status_code'
+[2025-06-05 14:05:49] Error: Ошибка в обработчике погоды: 'dict' object has no attribute 'text'

@@ -5,5 +5,5 @@ bot:
   users_db: "./data/users.csv"
   
 weather:
-  cities: ["Moscow", "Saint-Petersburg", "London", "New York"]
+  cities: ["Москва", "Санкт-Петербург", "Одинцово", "Сургут"]
   api_key: ${WEATHER_API_KEY}  # Берется из .env
