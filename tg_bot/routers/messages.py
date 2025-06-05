@@ -89,7 +89,7 @@ async def handle_voice(message: Message) -> None:
     
     
 @router.message(F.location)
-async def handle_location(message: Message):
+async def handle_location(message: Message) -> None:
     if not message.from_user or not message.location:
         return
     

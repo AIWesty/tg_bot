@@ -8,19 +8,17 @@ import requests
 router = Router() 
 
 @router.callback_query(F.data.startswith('city_')) #делаем из функции обработчик callback  запроса от тг
-async def send_weather(callback: CallbackQuery):
+async def send_weather(callback: CallbackQuery) -> None:
     if not callback.data or not callback.message: 
         return
     
     try:
     
         city = callback.data.split('_')[1] #из пришедших данных выбираем город(пример: city_Moscow)
-        print(f"Requested city: {city}") 
         
         config = load_config() # загружаем конфиг
         
         api_key = config.weather.api_key # берем апи ключ с конфига
-        print(f"API key: {'exists' if api_key else 'missing'}")
         
         url = f'http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=ru'
         print(f"Request URL: {url}")

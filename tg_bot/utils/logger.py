@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime 
 
-ERR_DIR = Path('data/reports')
+ERR_DIR = Path('data/errors')
 ERR_DIR.mkdir(parents=True, exist_ok=True) # путь до reports с созданием родителя если нет 
 LOG_DIR = Path('data/logs')
 LOG_DIR.mkdir(parents=True, exist_ok=True) # путь до logs с созданием родителя если нет
