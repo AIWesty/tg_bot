@@ -1,8 +1,9 @@
 from aiogram import Router
 from aiogram.types import CallbackQuery
 from aiogram import F
-from utils.logger import log_errors, log_message
+from utils.logger import logger
 from utils.config import load_config
+from utils.fallbacks import fallback
 import requests
 
 router = Router() 
@@ -32,24 +33,47 @@ async def send_weather(callback: CallbackQuery) -> None:
             await callback.message.answer(f"Не удалось получить погоду 😕\nОшибка: {error_msg}")
             return
 
-        #формируем ответ
-        weather_data = (
-                f"🌤 Погода в {city}:\n"
-                f"🌡 Температура: {response['main']['temp']}°C\n"
-                f"💨 Ветер: {response['wind']['speed']} м/с\n"
-                f"☁️ Облачность: {response['clouds']['all']}%"
-            )  
-            
-        await callback.message.answer(weather_data) #отвечаем
-        await callback.answer() #закрываем полоску загрузки
+        # Формируем данные о погоде
+        weather_data = {
+            'temp': response['main']['temp'],
+            'wind': response['wind']['speed'],
+            'clouds': response['clouds']['all']
+        }
         
-        log_message(callback.from_user.id, f'Запрошена погода для города {city}')
+        # Обновляем кэш при успешном запросе
+        fallback.update_weather_cache(
+            city=city,
+            temperature=f"{weather_data['temp']}°C",
+            wind=f"{weather_data['wind']} м/с",
+            clouds=f"{weather_data['clouds']}%"
+        )
+        
+        # Формируем ответ
+        response_text = (
+            f"🌤 Погода в {city}:\n"
+            f"🌡 Температура: {weather_data['temp']}°C\n"
+            f"💨 Ветер: {weather_data['wind']} м/с\n"
+            f"☁️ Облачность: {weather_data['clouds']}%"
+        )
+        
+        await callback.message.answer(response_text)
+        await callback.answer()
+        logger.log_message(callback.from_user.id, f'Запрошена погода для города {city}')
     
     except IndexError:
         await callback.message.answer("Некорректный формат запроса")
+        logger.log_error("Некорректный формат callback данных", user_id=callback.from_user.id)
+    
     except requests.exceptions.RequestException as e:
-        await callback.message.answer("Ошибка подключения к сервису погоды")
-        log_errors(f'Ошибка запроса погоды: {str(e)}')
+        # Пробуем получить данные из кэша
+        cached_response = fallback.get_weather_fallback(city)
+        if cached_response:
+            await callback.message.answer(cached_response + "\n(данные могут быть неактуальными)")
+            logger.log_message(callback.from_user.id, f'Использованы кэшированные данные для {city}')
+        else:
+            await callback.message.answer("Сервис погоды временно недоступен. Попробуйте позже.")
+            logger.log_error(f'Ошибка запроса погоды: {str(e)}', user_id=callback.from_user.id)
+    
     except Exception as e:
         await callback.message.answer("Произошла непредвиденная ошибка")
-        log_errors(f'Ошибка в обработчике погоды: {str(e)}')
+        logger.log_error(f'Ошибка в обработчике погоды: {str(e)}', user_id=callback.from_user.id)

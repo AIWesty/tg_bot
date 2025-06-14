@@ -1,7 +1,7 @@
 import csv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram import Bot
-from utils.logger import log_errors, log_message
+from utils.logger import logger
 from utils.report import generate_daily_report
 from typing import List
 
@@ -62,5 +62,5 @@ async def setup_scheduler(bot: Bot, admin_ids: List[int]) -> AsyncIOScheduler:
         return scheduler
         
     except Exception as e:
-        log_errors(f"Ошибка при настройке планировщика: {e}")
+        logger.log_error(f"Ошибка при настройке планировщика: {e}")
         raise

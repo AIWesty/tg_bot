@@ -1,14 +1,17 @@
 #В данной версии бота используется библиотека request - синхронная библиотека для http запросов
 #Однако в проекте мы таже используем асинхронный фреймворк aiogram
 #Совмещать синхронный и асинхронный код является плохой практикой, но это сделано в учебных целях
-#В продакшене рекомендуется придерживаться выбранного способо обработки(здесь можно использовать aiohttp)
+#В продакшене рекомендуется придерживаться асинхронной обработки(здесь можно использовать aiohttp)
 
 from pathlib import Path
 from aiogram import Router, F
 from aiogram.types import Message
 from keyboards.reply import main_keyboard
-from utils.logger import log_errors, log_message
+from database.crud import get_user_language
+from utils.logger import logger
+from utils.i18n import translator
 from utils.speech import speech_to_text  #модуль распознования голоса
+from utils.fallbacks import fallback
 import requests
 import os
 
@@ -18,75 +21,88 @@ router = Router()
 @router.message(F.text.lower() == 'кота!')
 async def send_cat(message: Message) -> None: #функция обработчик сообщения кота!(разного регистра)
     
-    cat_api_url = 'https://api.thecatapi.com/v1/images/search' #url запроса к апи сайта с картинками
-    response = requests.get(cat_api_url).json() # гет запрос по url, парсит Json ответ в словарь
-    cat_url = response[0]['url'] #сайт изначально выдает не сразу картинку а json ответ со словарем, мы обращаемся к нему по ключу url, вытаскивая картинку
+    if not message.from_user: #проверяем наличие пользователя 
+        return
     
-    if message.from_user is None: # проверяем наличие from_user
-            await message.answer(cat_url, caption="Вот тебе котик! 🐱") 
-            return
     user = message.from_user
+    lang = get_user_language(user.id)  # Получаем язык пользователя
+    logger.log_message(user.id, translator.get('cat_command_log', lang)) #логируем вызов
+    
+    try: 
+        cat_api_url = 'https://api.thecatapi.com/v1/images/search' #url запроса к апи сайта с картинками
+        response = requests.get(cat_api_url, timeout=5).json() # гет запрос по url, парсит Json ответ в словарь
+        cat_url = response[0]['url'] #сайт изначально выдает не сразу картинку а json ответ со словарем, мы обращаемся к нему по ключу url, вытаскивая картинку
+
+        fallback.update_cat_cache(cat_url)  # Обновляем кэш
         
-    log_message(user.id, f'Вызвал команду (кота!))') #логирование команды
+        await message.answer_photo(
+            cat_url, 
+            caption=translator.get('cat_response', lang)  # Локализованная подпись
+        ) 
     
-    await message.answer_photo(cat_url, caption="Вот тебе котик! 🐱") 
-    
+    except Exception as e: 
+        logger.log_error(f'Ошибка API котов: {str(e)}', user_id=user.id)
+        # Используем кэшированную картинку
+        cached_cat = fallback.get_cat_fallback()
+        await message.answer_photo(
+            cached_cat,
+            caption=translator.get('cat_fallback', lang)  # Локализованный фолбек
+        )
     
 
 @router.message(F.text.lower() == 'получить погоду')
 async def send_weather_menu(message: Message) -> None:  #обработчик функции получить погоду
-    from keyboards.inline import weather_keyboard  #импортируем клавиатуру
-    if message.from_user is None:
-        await message.answer('Выберите город:', reply_markup=weather_keyboard())
-        return
+    if not message.from_user: # проверяем юзера
+        return 
+    
     user = message.from_user
+    lang = get_user_language(user.id)
+    logger.log_message(user.id, translator.get('weather_command_log', lang))
     
-    log_message(user.id, f'Вызвал команду (получить погоду)')
-    
-    #отвечаем и возвращаем клавиатуру с погодой
-    await message.answer('Выберите город:', reply_markup=weather_keyboard())
+    from keyboards.inline import weather_keyboard
+    await message.answer(
+        translator.get('weather_menu', lang),  # Локализованный текст
+        reply_markup=weather_keyboard()
+    )
 
 
 @router.message(F.voice)
 async def handle_voice(message: Message) -> None:
-    os.makedirs("temp", exist_ok=True)
     
     if not message.voice or not message.from_user or not message.bot: #проверяем существуют ли voice, user и bot 
-        await message.answer("Ошибка: неверные параметры сообщения")
         return
     
     user = message.from_user
-    
+    lang = get_user_language(user.id)
+    logger.log_message(user.id, translator.get('voice_command_log', lang))
+
+    os.makedirs("temp", exist_ok=True) #делаем если нет директорию temp
+    voice_path = f"temp/voice_{user.id}.ogg" # делаем путь к кешу гс 
     
     try:
-        voice_file = await message.bot.get_file(message.voice.file_id)
-        if not voice_file.file_path: 
-            await message.answer("Не удалось получить путь к файлу")
+        voice_file = await message.bot.get_file(message.voice.file_id) # получаем файл из тг
+        if voice_file.file_path is None:
+            await message.reply(translator.get('voice_file_error', lang))
             return
-            
-        voice_path = f"temp/voice_{message.from_user.id}.ogg" #формируем путь к фременному файлу
-        await message.bot.download_file(voice_file.file_path, voice_path) #загружаем файл с гс(откуда, куда)
-        
-        # Добавляем лог
-        print(f"Файл сохранён: {voice_path}, размер: {os.path.getsize(voice_path)} байт")
-        
+
+        await message.bot.download_file(voice_file.file_path, voice_path) # загружаем файл (откуда/куда)
         text = speech_to_text(voice_path)
-        print(f"Распознанный текст: '{text}'")
-        
         if text:
-            await message.answer(f"Вы сказали: {text}")
+            await message.answer(
+                translator.get('voice_response', lang, text=text)  # Локализованный ответ
+            )
         else:
-            await message.answer("Не удалось распознать речь")
+            await message.answer(
+                translator.get('voice_fallback', lang)  # Локализованный фолбек
+            )
             
     except Exception as e:
-        print(f"Ошибка обработки: {e}")
-        await message.answer("Произошла ошибка при обработке голосового")
+        logger.log_error(f'Ошибка распознавания голоса: {str(e)}', user_id=user.id)
+        await message.answer(translator.get('voice_fallback', lang))
     finally:
         if os.path.exists(voice_path):
-            os.remove(voice_path)
-    
-    log_message(user.id, f'Вызвал команду (обработка голосового сообщения)')
-    
+            os.remove(voice_path) #в конце удаляем временные файлы
+            
     
 @router.message(F.location)
 async def handle_location(message: Message) -> None:
@@ -94,7 +110,8 @@ async def handle_location(message: Message) -> None:
         return
     
     user = message.from_user
-    
+    lang = get_user_language(user.id)
+    logger.log_message(user.id, translator.get('location_command_log', lang))
     
     try:
         lat = message.location.latitude
@@ -115,19 +132,25 @@ async def handle_location(message: Message) -> None:
             api_response.raise_for_status()  # ловим исключения 4хх/5хх
             
             response_data = api_response.json() # распаковываем в json полученные данные
-            address = response_data.get("display_name", "Адрес не найден") #ищем локацию под display name
+            address = response_data.get(
+                "display_name", 
+                translator.get('address_not_found', lang)  # Локализованный фолбек
+            )
             
-        except requests.exceptions.RequestException as e:
-            log_errors(f"API request failed: {e}")
-            address = "Не удалось получить данные о местоположении"
-        except ValueError as e:  # Вложенные Json ошибки
-            log_errors(f"Invalid API response: {e}")
-            address = "Ошибка обработки данных местоположения"
+        except requests.exceptions.RequestException as e: #обработка ошибок в запросах 
+            logger.log_error(f"Ошибка API геолокации: {str(e)}", user_id=user.id)
+            address = translator.get('api_error', lang)  # Локализованный фолбек
+        except ValueError as e:
+            logger.log_error(f"Ошибка обработки геоданных: {str(e)}", user_id=user.id)
+            address = translator.get('data_processing_error', lang)  # Локализованный фолбек
             
-        await message.answer(f"📍 Адрес: {address}") # отправка результата
+        await message.answer(
+            translator.get('location_response', lang, address=address)  # Локализованный ответ
+        )
         
     except Exception as e:
-        log_errors("Unexpected error in location handler")
-        await message.answer("⚠️ Произошла ошибка при обработке местоположения")
+        logger.log_error(f"Неожиданная ошибка геолокации: {str(e)}", user_id=user.id)
+        await message.answer(
+            translator.get('location_error', lang)  # Локализованный фолбек
+        )
         
-    log_message(user.id, f'Вызвал команду Location')
