@@ -1,43 +1,67 @@
 {
   "cat_response": "Here's a cat for you! 🐱",
   "cat_fallback": "Here's a cached cat! 🐱 (service temporarily unavailable)",
-  "cat_command_log": "Called 'Cat!' command",
+  "cat_command_log": "User requested a cat",
   "weather_menu": "Choose city:",
-  "weather_command_log": "Requested weather menu",
-  "voice_response": "You said: {text}",
-  "voice_fallback": "Failed to recognize speech. Please try typing",
-  "voice_command_log": "Sent voice message",
-  "voice_file_error": "Error: failed to get voice message",
-  "location_response": "📍 Address: {address}",
-  "location_error": "⚠️ Error processing location",
-  "location_command_log": "Sent location",
-  "address_not_found": "Address not found",
-  "api_error": "Service temporarily unavailable",
-  "data_processing_error": "Data processing error",
-  "unknown_error": "An unexpected error occurred",
-  "choose_language": "Choose language:",
-  "language_changed": "Language changed to {language}",
+  "weather_command_log": "User requested weather",
   "weather_data": "🌤 Weather in {city}:\n🌡 Temperature: {temp}°C\n💨 Wind: {wind} m/s\n☁️ Clouds: {clouds}%",
   "weather_cache_note": "\n(cached data, may be outdated)",
-  "start_message": "Hello, {name}! I'm a bot. How can I help?",
-  "help_message": "Available commands:\n/start - Start dialog\n/help - Help\n/language - Change language",
-  "language_options": {
-    "ru": "Russian 🇷🇺",
-    "en": "English 🇬🇧"
-  },
+  "voice_response": "You said: {text}",
+  "voice_fallback": "Failed to recognize speech. Please type your message",
+  "voice_command_log": "Processing voice message",
+  "voice_file_error": "Error loading voice message",
+  "location_response": "📍 Address: {address}",
+  "location_error": "⚠️ Failed to determine address",
+  "location_command_log": "Processing location",
+  "address_not_found": "Address not found",
+  "api_error": "⚠️ Service temporarily unavailable",
+  "data_processing_error": "Data processing error",
+  "unknown_error": "⚠️ An unexpected error occurred",
+  "choose_language": "Choose language:",
+  "language_changed": "Language changed to {language}",
   "language_name": "English",
   "unsupported_language": "Unsupported language",
   "language_change_error": "Language change error",
-  "help_title": "🌟 Available Commands",
-  "help_commands": {
-    "start": "Start working with bot",
-    "help": "Show this message",
-    "language": "Change language (ru/en)",
-    "me": "Show my statistics",
-    "weather": "Get weather",
-    "cat": "Get random cat",
-    "roll": "Random number"
+  "start_message": "Hello, {name}! I'm a bot. How can I help?",
+  "start_command_log": "User started the bot",
+  "help_title": "📝 Available commands",
+  "help_message": "Available commands:\n/start - Start dialog\n/help - Help\n/language - Change language\n/me - My stats\n/roll - Random number",
+  "commands_list": "Available commands:\n{commands}",
+  "quick_actions": "Quick actions:",
+  "type_slash": "Type / to choose command",
+  "available_commands": "Available commands:",
+  "usage_examples": "Usage examples:",
+  "help_examples": {
+    "cat": "Type 'Cat!' or click 🐱 button",
+    "weather": "Type 'Weather' or click 🌤️ button",
+    "location": "Send your location"
   },
-  "commands_list": "Available commands:\n{}",
-  "type_slash": "Type / to see available commands"
+  "help_footer": "Choose an action:",
+  "error_help": "⚠️ Help information unavailable",
+  "keyboard": {
+    "weather": "🌤️ Weather",
+    "cat": "🐱 Cat!",
+    "placeholder": "Choose action...",
+    "location": "📍 Send location"
+  },
+  "stats": {
+    "title": "📊 Your statistics",
+    "total": "Total commands: {count}",
+    "last": "Last activity: {date}",
+    "favorite": "Your most used command: {command}",
+    "error": "⚠️ Statistics unavailable"
+  },
+  "roll_command": {
+    "result": "🎲 Result: {number}",
+    "error": "Invalid format. Use /roll 1-100"
+  },
+  "user": {
+    "unknown": "Guest",
+    "welcome": "Welcome, {name}!"
+  },
+  "errors": {
+    "permission": "⛔ You don't have permission",
+    "timeout": "⌛ Timeout exceeded",
+    "retry": "Please try again later"
+  }
 }

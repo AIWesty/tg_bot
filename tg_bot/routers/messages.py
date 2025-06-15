@@ -6,9 +6,8 @@
 from pathlib import Path
 from aiogram import Router, F
 from aiogram.types import Message
-from keyboards.reply import main_keyboard
 from database.crud import get_user_language
-from utils.logger import logger
+from utils.logger import logger, user_stats_logger
 from utils.i18n import translator
 from utils.speech import speech_to_text  #модуль распознования голоса
 from utils.fallbacks import fallback
@@ -18,7 +17,7 @@ import os
 
 router = Router()
 
-@router.message(F.text.lower() == 'кота!')
+@router.message(F.text.lower().in_(['кота!', 'cat!']))
 async def send_cat(message: Message) -> None: #функция обработчик сообщения кота!(разного регистра)
     
     if not message.from_user: #проверяем наличие пользователя 
@@ -27,6 +26,7 @@ async def send_cat(message: Message) -> None: #функция обработчи
     user = message.from_user
     lang = get_user_language(user.id)  # Получаем язык пользователя
     logger.log_message(user.id, translator.get('cat_command_log', lang)) #логируем вызов
+    user_stats_logger.log_command(user.id, '/Вызвал команду кота!')
     
     try: 
         cat_api_url = 'https://api.thecatapi.com/v1/images/search' #url запроса к апи сайта с картинками
@@ -50,7 +50,7 @@ async def send_cat(message: Message) -> None: #функция обработчи
         )
     
 
-@router.message(F.text.lower() == 'получить погоду')
+@router.message(F.text.lower().in_(['получить погоду', 'get the weather']))
 async def send_weather_menu(message: Message) -> None:  #обработчик функции получить погоду
     if not message.from_user: # проверяем юзера
         return 
@@ -58,6 +58,7 @@ async def send_weather_menu(message: Message) -> None:  #обработчик ф
     user = message.from_user
     lang = get_user_language(user.id)
     logger.log_message(user.id, translator.get('weather_command_log', lang))
+    user_stats_logger.log_command(user.id, '/Вызвал получить погоду')
     
     from keyboards.inline import weather_keyboard
     await message.answer(
@@ -75,6 +76,7 @@ async def handle_voice(message: Message) -> None:
     user = message.from_user
     lang = get_user_language(user.id)
     logger.log_message(user.id, translator.get('voice_command_log', lang))
+    user_stats_logger.log_command(user.id, '/Вызвал распознования голоса')
 
     os.makedirs("temp", exist_ok=True) #делаем если нет директорию temp
     voice_path = f"temp/voice_{user.id}.ogg" # делаем путь к кешу гс 
@@ -112,7 +114,7 @@ async def handle_location(message: Message) -> None:
     user = message.from_user
     lang = get_user_language(user.id)
     logger.log_message(user.id, translator.get('location_command_log', lang))
-    
+    user_stats_logger.log_command(user.id, '/Вызвал команду обработки локации!')
     try:
         lat = message.location.latitude
         lon = message.location.longitude

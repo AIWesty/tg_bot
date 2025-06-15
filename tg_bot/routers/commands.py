@@ -2,9 +2,10 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.filters import Command
-from keyboards.reply import main_keyboard
+from keyboards.reply import get_action_keyboard, get_main_keyboard
 from keyboards.inline import language_keyboard
-from utils.logger import logger
+from utils.user_stats import format_stats_message, get_user_stats
+from utils.logger import logger, user_stats_logger
 from utils.i18n import translator
 from database.crud import get_user_language, save_user
 import random
@@ -40,7 +41,7 @@ async def cmd_start(message: Message) -> None:
     )
     
     logger.log_message(user.id, translator.get('start_command_log', lang=lang))  # логируем обращение пользователя
-    
+    user_stats_logger.log_command(user.id, '/start')
     # Формируем приветственное сообщение с учетом локализации
     welcome_text = translator.get(
         'start_message',
@@ -50,55 +51,68 @@ async def cmd_start(message: Message) -> None:
     
     await message.answer(
         welcome_text,
-        reply_markup=main_keyboard(lang)  # подключаем интерактивную клавиатуру (кнопки)
+        reply_markup=get_main_keyboard(lang)  # подключаем интерактивную клавиатуру (кнопки)
     )
     
 
 @router.message(Command("help"))
 async def cmd_help(message: Message) -> None:
-    """Обработчик команды /help с форматированием и обработкой ошибок"""
+    """Универсальный обработчик команды /help для всех языков"""
     try:
-        # Проверяем наличие пользователя
-        if message.from_user is None:
+        if not message.from_user:
             logger.log_error("Empty from_user in help command")
             return
 
         user_id = message.from_user.id
         lang = get_user_language(user_id)
-        logger.log_message(user_id, "Called /help command")
+        logger.log_message(user_id, f"Called /help command (lang: {lang})")
+        user_stats_logger.log_command(user_id, '/help')
+        # Получаем локализованные данные
+        help_data = {
+            'title': translator.get("help_title", lang=lang),
+            'commands': translator.get("help_commands", lang=lang),
+            'footer': translator.get("help_footer", lang=lang),
+            'examples': translator.get("help_examples", lang=lang)
+        }
 
-        # Получаем данные для справки
-        help_title = translator.get("help_title", lang=lang)
-        commands_dict = translator.get("help_commands", lang=lang)
-        
         # Формируем список команд
-        if isinstance(commands_dict, dict):
+        commands_list = ""
+        if isinstance(help_data['commands'], dict):
             commands_list = "\n".join(
                 f"• /{cmd} - {desc}" 
-                for cmd, desc in sorted(commands_dict.items())  # Сортируем команды по алфавиту
+                for cmd, desc in sorted(help_data['commands'].items())
             )
         else:
-            logger.log_error(f"Неизвестная команда и язык {lang}")
-            commands_list = translator.get("help_default_commands", lang=lang)
+            commands_list = str(help_data['commands'])
+
+        # Формируем примеры использования
+        examples_text = ""
+        if isinstance(help_data['examples'], dict):
+            examples_text = "\n".join(
+                f"🔹 {example}" 
+                for example in help_data['examples'].values()
+            )
 
         # Собираем итоговое сообщение
         help_message = (
-            f"<b>{help_title}</b>\n\n"
+            f"<b>{help_data['title']}</b>\n\n"
+            f"<u>{translator.get('available_commands', lang=lang)}</u>:\n"
             f"{commands_list}\n\n"
-            f"{translator.get('', lang=lang)}"
+            f"<u>{translator.get('usage_examples', lang=lang)}</u>:\n"
+            f"{examples_text}\n\n"
+            f"{help_data['footer']}"
         )
 
         await message.answer(
             help_message,
-            parse_mode="HTML"  # Для красивого форматирования
+            parse_mode="HTML",
+            reply_markup=get_action_keyboard(lang)  # Добавляем клавиатуру действий
         )
 
     except Exception as e:
-        logger.log_error(f"Error in help command: {e}")
-        await message.answer(
-            "⚠️ Произошла ошибка при получении справки. Попробуйте позже.",
-            parse_mode="HTML"
-        )
+        logger.log_error(f"Help command error: {e}")
+        error_msg = translator.get("error_help", lang=lang, default="⚠️ Help unavailable now")
+        await message.answer(error_msg, parse_mode="HTML")
 
 @router.message(F.text == '/')
 async def show_commands_hint(message: Message):
@@ -155,6 +169,7 @@ async def cmd_about(message: Message) -> None:  # обработчик кома�
             user = message.from_user
             
             logger.log_message(user.id, f'Вызвал команду (/about)')
+            user_stats_logger.log_command(user.id, '/about')
             
             await message.answer(about_txt)
             
@@ -198,7 +213,7 @@ async def cmd_roll(message: Message): # обработка команды рол
         await message.answer(f"🎲 Выпало: {random.randint(1, 6)}")
     
     logger.log_message(user.id, f'Вызвал команду (/about)')
-    
+    user_stats_logger.log_command(user.id, '/roll')
     
     
 @router.message(Command("language"))
@@ -206,11 +221,13 @@ async def cmd_language(message: Message):
     """Обработчик команды /language - показывает клавиатуру выбора языка"""
     if message.from_user is None: 
         return
+    user = message.from_user
     lang = get_user_language(message.from_user.id)
     await message.answer(
         translator.get("choose_language", lang=lang),
         reply_markup=language_keyboard()
     )
+    logger.log_message(user.id, 'Вызвал команду /language')
 
 @router.callback_query(F.data.startswith("set_lang_"))
 async def set_language_callback(callback: CallbackQuery):
@@ -223,7 +240,6 @@ async def set_language_callback(callback: CallbackQuery):
         # Парсим выбранный язык из callback (формат: set_lang_ru)
         lang = callback.data.split('_')[2]
         user_id = callback.from_user.id
-        
         # Проверяем поддержку языка
         if lang not in translator.locales:
             raise ValueError("Unsupported language")
@@ -245,6 +261,7 @@ async def set_language_callback(callback: CallbackQuery):
             )
             else:
                 # Для инлайн-сообщений используем другой подход
+                logger.log_message(user_id, 'Вызывал команду /set_language_callback')
                 await callback.bot.edit_message_text(
                     chat_id=callback.from_user.id,
                     message_id=callback.message.message_id if callback.message else None,
@@ -264,3 +281,37 @@ async def set_language_callback(callback: CallbackQuery):
         await callback.answer("⚠️ Ошибка смены языка")
         logger.log_error(f"Language change error: {str(e)}", user_id=callback.from_user.id)
         
+
+@router.message(Command("me"))
+async def cmd_me(message: Message) -> None:
+    """Обработчик команды /me - показывает статистику пользователя"""
+    try:
+        if not message.from_user:
+            logger.log_error("message.from_user пустой")
+            return
+
+        user = message.from_user
+        lang = get_user_language(user.id)
+        logger.log_message(user.id, "вызвана команда /me")
+        
+        # Логируем команду и обновляем статистику
+        user_data = {
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name
+        }
+        user_stats_logger.log_command(user.id, "/me", user_data)
+        
+        # Получаем статистику
+        stats = user_stats_logger.get_user_stats(user.id)
+        
+        # Форматируем сообщение
+        response = format_stats_message(stats, lang)
+        
+        await message.answer(response, parse_mode="HTML")
+
+    except Exception as e:
+        logger.log_error(f"/me error: {e}", user.id)
+        error_msg = translator.get("error_stats", lang=lang, default="⚠️ Не удалось получить статистику")
+        await message.answer(error_msg)
+
