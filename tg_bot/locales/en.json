@@ -29,11 +29,11 @@
   "commands_list": "Available commands:\n{commands}",
   "quick_actions": "Quick actions:",
   "type_slash": "Type / to choose command",
-  "available_commands": "Available commands:",
-  "usage_examples": "Usage examples:",
+  "available_commands": "Available commands",
+  "usage_examples": "Messages",
   "help_examples": {
     "cat": "Type 'Cat!' or click 🐱 button",
-    "weather": "Type 'Weather' or click 🌤️ button",
+    "weather": "Type 'Get the weather' or click 🌤️ button",
     "location": "Send your location"
   },
   "help_footer": "Choose an action:",
@@ -43,6 +43,13 @@
     "cat": "🐱 Cat!",
     "placeholder": "Choose action...",
     "location": "📍 Send location"
+  },
+  "help_commands": {
+    "start": "",
+    "help": "Показать это сообщение",
+    "language": "Сменить язык (ru/en)",
+    "me": "Показать мою статистику",
+    "roll": "Случайное число"
   },
   "stats": {
     "title": "📊 Your statistics",
@@ -62,6 +69,11 @@
   "errors": {
     "permission": "⛔ You don't have permission",
     "timeout": "⌛ Timeout exceeded",
-    "retry": "Please try again later"
+    "retry": "Please try again later",
+    "cat_api": "Cat API error: {error}",
+    "voice_processing": "Voice processing error: {error}",
+    "location_api": "Location API error: {error}",
+    "location_data": "Location data error: {error}",
+    "location_unexpected": "Unexpected location error: {error}"
   }
 }
