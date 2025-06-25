@@ -59,63 +59,80 @@ async def cmd_start(message: Message) -> None:
 async def cmd_help(message: Message) -> None:
     """Универсальный обработчик команды /help для всех языков"""
     try:
-        if not message.from_user:
-            logger.log_error("Empty from_user in help command")  
+        # Проверка пользователя
+        if message.from_user is None:
+            logger.log_error("Empty from_user in help command")
             return
 
         user_id = message.from_user.id
-        lang = get_user_language(user_id)
-        logger.log_message(user_id, f"Called /help command (lang: {lang})")  
-        user_stats_logger.log_command(user_id, '/help')
+        lang = get_user_language(user_id) or 'en'
         
-        # Получаем локализованные данные 
-        help_data = {
-            'title': translator.get("help_title", lang=lang),
-            'commands': translator.get("help_commands", lang=lang),
-            'footer': translator.get("help_footer", lang=lang),
-            'examples': translator.get("help_examples", lang=lang)
-        }
+        # Логирование
+        logger.log_message(user_id, f"Called /help command (lang: {lang})")
+        user_stats_logger.log_command(user_id, '/help')
 
-        # Формируем список команд
-        commands_list = ""
-        if isinstance(help_data['commands'], dict):
-            commands_list = "\n".join(
-                f"• /{cmd} - {desc}" 
-                for cmd, desc in sorted(help_data['commands'].items()))
+        # Функция для удобного получения перевода
+        def get_translation(key: str) -> str:
+            """Безопасное получение перевода с fallback'ами"""
+            result = translator.get(key, lang=lang)
+            return str(result) if result is not None else f"[{key}]"
+
+        # Получение данных
+        header = get_translation("help_header")
+        commands_title = get_translation("help_commands_title")
+        examples_title = get_translation("help_examples_title")
+        footer = get_translation("help_footer")
+
+        # Обработка команд
+        raw_commands = translator.get("help_commands", lang=lang)
+        if isinstance(raw_commands, dict):
+            commands = "\n".join(
+                f"• /{cmd} - {desc}"
+                for cmd, desc in sorted(raw_commands.items())
+            )
         else:
-            commands_list = str(help_data['commands'])
+            commands = str(raw_commands) if raw_commands is not None else ""
 
-        # Формируем примеры использования
-        examples_text = ""
-        if isinstance(help_data['examples'], dict):
-            examples_text = "\n".join(
-                f"🔹 {example}" 
-                for example in help_data['examples'].values())
+        # Обработка примеров
+        raw_examples = translator.get("help_examples", lang=lang)
+        if isinstance(raw_examples, dict):
+            examples = "\n".join(
+                f"🔹 {example}"
+                for example in raw_examples.values()
+            )
+        elif isinstance(raw_examples, list):
+            examples = "\n".join(f"🔹 {ex}" for ex in raw_examples)
+        else:
+            examples = str(raw_examples) if raw_examples is not None else ""
 
-        # Собираем итоговое сообщение
-        help_message = (
-            f"<b>{help_data['title']}</b>\n\n"
-            f"<u>{translator.get('available_commands', lang=lang)}</u>:\n"
-            f"{commands_list}\n\n"
-            f"<u>{translator.get('usage_examples', lang=lang)}</u>:\n"
-            f"{examples_text}\n\n"
-            f"{help_data['footer']}"
-        )
+        # Формирование сообщения
+        message_parts = [
+            f"📝 {header}",
+            "",
+            f"<b>{commands_title}</b>",
+            commands,
+            "",
+            f"<b>{examples_title}</b>",
+            examples,
+            "",
+            footer
+        ]
 
+        # Отправка сообщения
         await message.answer(
-            help_message,
+            "\n".join(message_parts),
             parse_mode="HTML",
-            reply_markup=get_action_keyboard(lang)  # Добавляем клавиатуру действий
+            reply_markup=get_action_keyboard(lang)
         )
 
     except Exception as e:
-        logger.log_error(f"Help command error: {e}")  
+        logger.log_error(f"Help command error: {str(e)}")
         error_msg = translator.get(
-            "error_help", 
-            lang=lang, 
+            "error_help",
+            lang=get_user_language(message.from_user.id) if message.from_user else 'en',
             default="⚠️ Help unavailable now"
         )
-        await message.answer(error_msg, parse_mode="HTML")
+        await message.answer(str(error_msg), parse_mode="HTML")
 
 @router.message(F.text == '/')
 async def show_commands_hint(message: Message):
@@ -216,65 +233,51 @@ async def cmd_about(message: Message) -> None:  # обработчик кома�
     
 @router.message(Command("roll"))
 async def cmd_roll(message: Message):
+    # Обработка отсутствия текста
     if message.text is None:
-        await message.answer(translator.get(
+        error_msg = translator.get(
             'roll_processing_error',
-            lang=get_user_language(message.from_user.id) if message.from_user else 'en',
-            default="❌ Не удалось обработать команду."
-        ))
+            lang=get_user_language(message.from_user.id) if message.from_user else 'en'
+        ) or "❌ Failed to process command."
+        await message.answer(error_msg)
         return
 
+    # Проверка пользователя
     if message.from_user is None:
         return
     
+    # Получаем язык с дефолтным значением 'en'
     user = message.from_user
-    lang = get_user_language(user.id)
+    lang = get_user_language(user.id) or 'en'  # Явное указание дефолтного языка
+    
+    # Debug: проверяем какой язык определился
 
     args = message.text.split()
-    
-    if len(args) > 1:
-        try:
+
+    try:
+        # Обработка диапазона
+        if len(args) > 1:
             start, end = map(int, args[1].split("-"))
             num = random.randint(start, end)
-            # Исправление: получаем только строку из translator.get()
-            roll_text = translator.get(
-                'roll_result_with_args',
-                lang=lang,
-                num=num,
-                default=f"🎲 Выпало: {num}"
-            )
-            if isinstance(roll_text, dict):  # Защита на случай если translator возвращает dict
-                roll_text = roll_text.get('result', f"🎲 Выпало: {num}")
-            await message.answer(roll_text)
-        except (ValueError, IndexError):
-            error_text = translator.get(
-                'roll_usage_error',
-                lang=lang,
-                default="❌ Используйте: /roll 1-100 (числа могут быть произвольными)"
-            )
-            if isinstance(error_text, dict):  # Защита на случай если translator возвращает dict
-                error_text = error_text.get('result', "❌ Используйте: /roll 1-100 (числа могут быть произвольными)")
-            await message.answer(error_text)
-    else:
-        default_text = f"🎲 Выпало: {random.randint(1, 6)}"
-        roll_num = random.randint(1, 6)
-
-        roll_data = translator.get(
-            'roll_command',
-            lang=lang,
-            num=roll_num,
-            default={'result': default_text, 'error': "Неверный формат"}
-        )
-
-        if isinstance(roll_data, dict):
-            roll_text = roll_data.get('result', default_text)
+            response = translator.get('roll_result_with_args', lang=lang) or f"🎲 Rolled: {num}"
+        # Стандартный случай
         else:
-            roll_text = str(roll_data)  # На случай если вернулся не dict и не str
+            num = random.randint(1, 6)
+            response = translator.get('roll_default', lang=lang) or f"🎲 Rolled: {num}"
 
-        await message.answer(roll_text)
+        # Форматирование ответа (если содержит {num})
+        if '{num}' in response:
+            response = response.format(num=num)
+            
+        await message.answer(response)
 
-        logger.log_message(user.id, f'Вызвал команду (/roll)')
+        # Логирование
+        logger.log_message(user.id, f'Used /roll command')
         user_stats_logger.log_command(user.id, '/roll')
+
+    except (ValueError, IndexError):
+        error_msg = translator.get('roll_usage_error', lang=lang) or "❌ Usage: /roll start-end (e.g. /roll 1-100)"
+        await message.answer(error_msg)
     
 @router.message(Command("language"))
 async def cmd_language(message: Message):

@@ -24,33 +24,24 @@
   "language_change_error": "Language change error",
   "start_message": "Hello, {name}! I'm a bot. How can I help?",
   "start_command_log": "User started the bot",
-  "help_title": "📝 Available commands",
-  "help_message": "Available commands:\n/start - Start dialog\n/help - Help\n/language - Change language\n/me - My stats\n/roll - Random number",
-  "commands_list": "Available commands:\n{commands}",
-  "quick_actions": "Quick actions:",
-  "type_slash": "Type / to choose command",
-  "available_commands": "Available commands",
-  "usage_examples": "Messages",
+  "help_header": " Available commands",
+  "help_commands_title": "Available commands:",
+  "help_examples_title": "Available actions:",
+  "help_commands": {
+    "start": "Start working with the bot",
+    "help": "Show this message",
+    "about": "Show information about bot and author",
+    "language": "Change language (ru/en)",
+    "location": "Send your location to get address",
+    "me": "Show my statistics",
+    "roll": "Random number"
+  },
   "help_examples": {
-    "cat": "Type 'Cat!' or click 🐱 button",
-    "weather": "Type 'Get the weather' or click 🌤️ button",
-    "location": "Send your location"
+    "cat": "Type 'Cat!' or click the 🐱 button",
+    "weather": "Type 'Get weather' or click the 🌤️ button",
+    "location": "Send your location to get address"
   },
   "help_footer": "Choose an action:",
-  "error_help": "⚠️ Help information unavailable",
-  "keyboard": {
-    "weather": "🌤️ Weather",
-    "cat": "🐱 Cat!",
-    "placeholder": "Choose action...",
-    "location": "📍 Send location"
-  },
-  "help_commands": {
-    "start": "",
-    "help": "Показать это сообщение",
-    "language": "Сменить язык (ru/en)",
-    "me": "Показать мою статистику",
-    "roll": "Случайное число"
-  },
   "stats": {
     "title": "📊 Your statistics",
     "total": "Total commands: {count}",
@@ -58,10 +49,10 @@
     "favorite": "Your most used command: {command}",
     "error": "⚠️ Statistics unavailable"
   },
-  "roll_command": {
-    "result": "🎲 Result: {number}",
-    "error": "Invalid format. Use /roll 1-100"
-  },
+  "roll_default": "🎲 Rolled: {num}",
+  "roll_result_with_args": "🎲 Result: {num}",
+  "roll_usage_error": "❌ Usage: /roll start-end",
+  "roll_processing_error": "❌ Command processing failed",
   "user": {
     "unknown": "Guest",
     "welcome": "Welcome, {name}!"
