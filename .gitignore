@@ -11,6 +11,8 @@ tg_bot/.env
 # Логи и временные файлы
 tg_bot/data/logs/*
 tg_bot/temp/*
+tg_bot/data/reports
+tg_bot/data/errors
 
 
 # Модель для vosk

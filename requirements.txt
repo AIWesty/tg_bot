@@ -1,9 +1,9 @@
 #зависимости проекта(фреймворки и сторонние библиотеки)
 
 aiogram # на данный момент актуально 3.20
-python-dotenv
+python-dotenv #виртуальное окружение
 python-decouple
-apscheduler
+apscheduler #для формирования отчетов
 pydantic # валидация данных
 vosk  # для обработки голоса
 requests  # для API погоды
