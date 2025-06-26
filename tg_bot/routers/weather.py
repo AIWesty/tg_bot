@@ -58,22 +58,26 @@ async def send_weather(callback: CallbackQuery) -> None:
             clouds=f"{weather_data['clouds']}%"
         )
         # Формируем ответ (LOCALIZATION: используем переводы для структуры сообщения)
-        response_text = translator.get(
-            'weather_response',
-            lang=lang,
-            city=city,
-            temp=weather_data['temp'],
-            wind=weather_data['wind'],
-            clouds=weather_data['clouds'],
-            description=weather_data['description'],
-            default=(
+        try:
+            response_text = translator.get(
+                'weather_response',
+                lang=lang,
+                city=city,
+                temp=weather_data['temp'],
+                wind=weather_data['wind'],
+                clouds=weather_data['clouds'],
+                description=weather_data['description']
+            )
+            # Если translator вернул сам ключ вместо перевода (значит перевод отсутствует)
+            if response_text == 'weather_response':
+                raise KeyError
+        except (KeyError, AttributeError):
+            response_text = (
                 f"🌤 Погода в {city}:\n"
                 f"🌡 Температура: {weather_data['temp']}°C\n"
                 f"💨 Ветер: {weather_data['wind']} м/с\n"
                 f"☁️ Облачность: {weather_data['clouds']}%\n"
-                f"📝 {weather_data['description']}"
             )
-        )
         
         await callback.message.answer(response_text)
         await callback.answer()
